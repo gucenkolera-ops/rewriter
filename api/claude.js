@@ -12,13 +12,18 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 4000 }
+        generationConfig: { maxOutputTokens: 4000 },
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+        ]
       })
     }
   );
 
   const data = await response.json();
-  console.log('FULL RESPONSE:', JSON.stringify(data));
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text  data?.candidates?.[0]?.output  '';
   res.status(200).json({ text });
 }
