@@ -1,36 +1,71 @@
 import { useState, useRef } from "react";
 
+const VOLUME_OPTIONS = {
+  shrink: {
+    label: "Сократить",
+    icon: "◀",
+    hint: "~60–75% от оригинала",
+    instruction: (len) => `ВАЖНО: объём результата должен быть КОРОЧЕ исходного — примерно ${Math.round(len * 0.65)} симв. (65% от ${len}). Убери воду, повторы и второстепенные детали, но сохрани суть.`,
+  },
+  same: {
+    label: "Сохранить",
+    icon: "■",
+    hint: "Тот же объём",
+    instruction: (len) => `ВАЖНО: объём результата должен быть примерно равен исходному (${len} симв.) — не короче и не длиннее.`,
+  },
+  expand: {
+    label: "Расширить",
+    icon: "▶",
+    hint: "~140–160% от оригинала",
+    instruction: (len) => `ВАЖНО: объём результата должен быть ДЛИННЕЕ исходного — примерно ${Math.round(len * 1.5)} симв. (150% от ${len}). Раскрой мысли подробнее, добавь примеры или контекст, сохраняя стиль.`,
+  },
+};
+
+const LIST_NOTE = (keep) =>
+  keep
+    ? " Если в тексте есть списки, нумерация или перечисления — сохрани их структуру и форматирование в точности."
+    : " Если в тексте есть списки или нумерация — можешь перефразировать их в связный текст или оставить как есть.";
+
 const STYLES = {
   formal: {
     label: "Деловой",
     icon: "💼",
     desc: "Чётко и грамотно, без канцелярщины",
     passes: [
-      (text) => `Перепиши следующий текст в деловом, но живом стиле. Никакой канцелярщины, штампов и заумных терминов — пиши так, как говорит грамотный специалист на планёрке: чётко, по делу, понятно. Структуру и смысл сохрани полностью. ВАЖНО: объём результата должен быть примерно равен исходному (${text.length} симв.) — не короче. Только текст, без пояснений.\n\nТекст:\n${text}`,
-      (text) => `Этот деловой текст звучит немного сухо — добавь живости. Пусть за словами чувствуется человек: чуть неравномерный ритм, иногда короткое предложение после длинного, убери все шаблонные связки. Стиль остаётся профессиональным, но не казённым. ВАЖНО: объём результата должен быть примерно равен исходному (${text.length} симв.) — не короче. Только текст.\n\nТекст:\n${text}`,
-      (text) => `Финальная правка делового текста: убери повторы, выровняй ритм, сделай переходы между мыслями плавными. Результат должен читаться легко и звучать как живая речь умного человека — не как отчёт. ВАЖНО: объём результата должен быть примерно равен исходному (${text.length} симв.) — не короче. Только текст.\n\nТекст:\n${text}`
-    ]
+      (text, keep, vol) =>
+        `КРИТИЧНО: відповідай тією ж мовою, якою написаний вхідний текст — якщо текст українською, пиши українською; якщо російською — російською. Перепиши следующий текст в деловом, но живом стиле. Никакой канцелярщины, штампов и заумных терминов — пиши так, как говорит грамотный специалист на планёрке: чётко, по делу, понятно. Структуру и смысл сохрани полностью.${LIST_NOTE(keep)} ${VOLUME_OPTIONS[vol].instruction(text.length)} Только текст, без пояснений.\n\nТекст:\n${text}`,
+      (text, keep, vol) =>
+        `КРИТИЧНО: відповідай тією ж мовою, якою написаний вхідний текст — якщо текст українською, пиши українською; якщо російською — російською. Этот деловой текст звучит немного сухо — добавь живости. Пусть за словами чувствуется человек: чуть неравномерный ритм, иногда короткое предложение после длинного, убери все шаблонные связки. Стиль остаётся профессиональным, но не казённым.${LIST_NOTE(keep)} ${VOLUME_OPTIONS[vol].instruction(text.length)} Только текст.\n\nТекст:\n${text}`,
+      (text, keep, vol) =>
+        `КРИТИЧНО: відповідай тією ж мовою, якою написаний вхідний текст — якщо текст українською, пиши українською; якщо російською — російською. Финальная правка делового текста: убери повторы, выровняй ритм, сделай переходы между мыслями плавными. Результат должен читаться легко и звучать как живая речь умного человека — не как отчёт.${LIST_NOTE(keep)} ${VOLUME_OPTIONS[vol].instruction(text.length)} Только текст.\n\nТекст:\n${text}`,
+    ],
   },
   neutral: {
     label: "Нейтральный",
     icon: "📝",
     desc: "Подойдёт для учёбы и работы",
     passes: [
-      (text) => `Перепиши следующий текст своими словами. Стиль — нейтральный, грамотный, подойдёт для учебной или рабочей работы. Не слишком официально, не слишком разговорно. Меняй структуру предложений, убирай шаблоны, но сохраняй смысл и факты. ВАЖНО: объём результата должен быть примерно равен исходному (${text.length} симв.) — не короче. Никаких пояснений — только текст.\n\nТекст:\n${text}`,
-      (text) => `Этот текст написан нейросетью — сделай его более естественным. Добавь неравномерный ритм (короткие и длинные предложения вперемешку), убери клише. Пиши как человек, который хорошо учился, но не говорит как робот. ВАЖНО: объём результата должен быть примерно равен исходному (${text.length} симв.) — не короче. Только текст, без пояснений.\n\nТекст:\n${text}`,
-      (text) => `Доработай текст: убери повторы слов, сделай переходы плавными, добавь чуть больше авторского голоса. Текст должен звучать как написанный живым человеком, при этом оставаться подходящим для учёбы или работы. ВАЖНО: объём результата должен быть примерно равен исходному (${text.length} симв.) — не короче. Только текст.\n\nТекст:\n${text}`
-    ]
+      (text, keep, vol) =>
+        `КРИТИЧНО: відповідай тією ж мовою, якою написаний вхідний текст — якщо текст українською, пиши українською; якщо російською — російською. Перепиши следующий текст своими словами. Стиль — нейтральный, грамотный, подойдёт для учебной или рабочей работы. Не слишком официально, не слишком разговорно. Меняй структуру предложений, убирай шаблоны, но сохраняй смысл и факты.${LIST_NOTE(keep)} ${VOLUME_OPTIONS[vol].instruction(text.length)} Никаких пояснений — только текст.\n\nТекст:\n${text}`,
+      (text, keep, vol) =>
+        `КРИТИЧНО: відповідай тією ж мовою, якою написаний вхідний текст — якщо текст українською, пиши українською; якщо російською — російською. Этот текст написан нейросетью — сделай его более естественным. Добавь неравномерный ритм (короткие и длинные предложения вперемешку), убери клише. Пиши как человек, который хорошо учился, но не говорит как робот.${LIST_NOTE(keep)} ${VOLUME_OPTIONS[vol].instruction(text.length)} Только текст, без пояснений.\n\nТекст:\n${text}`,
+      (text, keep, vol) =>
+        `КРИТИЧНО: відповідай тією ж мовою, якою написаний вхідний текст — якщо текст українською, пиши українською; якщо російською — російською. Доработай текст: убери повторы слов, сделай переходы плавными, добавь чуть больше авторского голоса. Текст должен звучать как написанный живым человеком, при этом оставаться подходящим для учёбы или работы.${LIST_NOTE(keep)} ${VOLUME_OPTIONS[vol].instruction(text.length)} Только текст.\n\nТекст:\n${text}`,
+    ],
   },
   lively: {
     label: "Живой",
     icon: "✨",
     desc: "Максимально человечно, без сленга",
     passes: [
-      (text) => `Перепиши следующий текст максимально живым языком. Пиши так, как умный человек рассказывает что-то интересное другу — просто, образно, с характером. Без сленга и грубостей, но очень по-человечески: можно чуть иронии, можно разговорные обороты. Смысл и факты сохрани. ВАЖНО: объём результата должен быть примерно равен исходному (${text.length} симв.) — не короче. Только текст.\n\nТекст:\n${text}`,
-      (text) => `Этот текст всё ещё звучит немного искусственно — сделай его по-настоящему живым. Неравномерный ритм, личные интонации, местами короткий удар после длинной фразы. Пиши как человек, у которого есть своё мнение и манера говорить — но без жаргона. ВАЖНО: объём результата должен быть примерно равен исходному (${text.length} симв.) — не короче. Только текст.\n\nТекст:\n${text}`,
-      (text) => `Финальная шлифовка: убери повторы, добавь плавности между мыслями, усиль индивидуальность стиля. Текст должен читаться на одном дыхании — живо, по-человечески, с характером, но без панибратства. ВАЖНО: объём результата должен быть примерно равен исходному (${text.length} симв.) — не короче. Только текст.\n\nТекст:\n${text}`
-    ]
-  }
+      (text, keep, vol) =>
+        `КРИТИЧНО: відповідай тією ж мовою, якою написаний вхідний текст — якщо текст українською, пиши українською; якщо російською — російською. Перепиши следующий текст максимально живым языком. Пиши так, как умный человек рассказывает что-то интересное другу — просто, образно, с характером. Без сленга и грубостей, но очень по-человечески: можно чуть иронии, можно разговорные обороты. Смысл и факты сохрани.${LIST_NOTE(keep)} ${VOLUME_OPTIONS[vol].instruction(text.length)} Только текст.\n\nТекст:\n${text}`,
+      (text, keep, vol) =>
+        `КРИТИЧНО: відповідай тією ж мовою, якою написаний вхідний текст — якщо текст українською, пиши українською; якщо російською — російською. Этот текст всё ещё звучит немного искусственно — сделай его по-настоящему живым. Неравномерный ритм, личные интонации, местами короткий удар после длинной фразы. Пиши как человек, у которого есть своё мнение и манера говорить — но без жаргона.${LIST_NOTE(keep)} ${VOLUME_OPTIONS[vol].instruction(text.length)} Только текст.\n\nТекст:\n${text}`,
+      (text, keep, vol) =>
+        `КРИТИЧНО: відповідай тією ж мовою, якою написаний вхідний текст — якщо текст українською, пиши українською; якщо російською — російською. Финальная шлифовка: убери повторы, добавь плавности между мыслями, усиль индивидуальность стиля. Текст должен читаться на одном дыхании — живо, по-человечески, с характером, но без панибратства.${LIST_NOTE(keep)} ${VOLUME_OPTIONS[vol].instruction(text.length)} Только текст.\n\nТекст:\n${text}`,
+    ],
+  },
 };
 
 const PASS_LABELS = ["Проход 1 — Перефразировка", "Проход 2 — Очеловечивание", "Проход 3 — Финал"];
@@ -42,7 +77,7 @@ async function callClaude(prompt) {
   const response = await fetch("/api/claude", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt })
+    body: JSON.stringify({ prompt }),
   });
   const data = await response.json();
   return data.text || "";
@@ -66,30 +101,10 @@ function copyToClipboard(text) {
   document.body.removeChild(ta);
 }
 
-function CopyBtn({ text }) {
-  const [copied, setCopied] = useState(false);
-  const handle = () => {
-    copyToClipboard(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-  return (
-    <button onClick={handle} style={{
-      background: copied ? "#5cfc8a22" : "#2a2a35",
-      border: `1px solid ${copied ? "#5cfc8a44" : "transparent"}`,
-      borderRadius: 6,
-      padding: "5px 12px",
-      color: copied ? "#5cfc8a" : "#aaa",
-      fontSize: 12,
-      cursor: "pointer",
-      transition: "all 0.2s"
-    }}>{copied ? "Скопировано ✓" : "Копировать"}</button>
-  );
-}
-
 function PassBlock({ label, text }) {
   const ref = useRef(null);
   const [selected, setSelected] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const selectAll = () => {
     const el = ref.current;
@@ -104,45 +119,76 @@ function PassBlock({ label, text }) {
     setTimeout(() => setSelected(false), 2000);
   };
 
+  const handleCopy = () => {
+    copyToClipboard(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 8
-      }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <label style={{ fontSize: 12, color: "#888", letterSpacing: 0.5 }}>{label.toUpperCase()}</label>
-        <button onClick={selectAll} style={{
-          background: selected ? "#5cfc8a22" : "#2a2a35",
-          border: `1px solid ${selected ? "#5cfc8a44" : "transparent"}`,
-          borderRadius: 6,
-          padding: "5px 12px",
-          color: selected ? "#5cfc8a" : "#aaa",
-          fontSize: 12,
-          cursor: "pointer",
-          transition: "all 0.2s"
-        }}>{selected ? "Выделено ✓" : "Выделить всё"}</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={selectAll}
+            style={{
+              background: selected ? "#5cfc8a22" : "#2a2a35",
+              border: `1px solid ${selected ? "#5cfc8a44" : "transparent"}`,
+              borderRadius: 6, padding: "5px 12px",
+              color: selected ? "#5cfc8a" : "#aaa",
+              fontSize: 12, cursor: "pointer", transition: "all 0.2s",
+            }}
+          >
+            {selected ? "Выделено ✓" : "Выделить всё"}
+          </button>
+          <button
+            onClick={handleCopy}
+            style={{
+              background: copied ? "#5cfc8a22" : "#2a2a35",
+              border: `1px solid ${copied ? "#5cfc8a44" : "transparent"}`,
+              borderRadius: 6, padding: "5px 12px",
+              color: copied ? "#5cfc8a" : "#aaa",
+              fontSize: 12, cursor: "pointer", transition: "all 0.2s",
+            }}
+          >
+            {copied ? "Скопировано ✓" : "Копировать"}
+          </button>
+        </div>
       </div>
       <div
         ref={ref}
         contentEditable
         suppressContentEditableWarning
         style={{
-          background: "#18181f",
-          border: "1px solid #2a2a35",
-          borderRadius: 10,
-          padding: 16,
-          fontSize: 14,
-          lineHeight: 1.7,
-          whiteSpace: "pre-wrap",
-          color: "#e8e6e0",
-          outline: "none",
-          userSelect: "text",
-          WebkitUserSelect: "text"
+          background: "#18181f", border: "1px solid #2a2a35", borderRadius: 10,
+          padding: 16, fontSize: 14, lineHeight: 1.7, whiteSpace: "pre-wrap",
+          color: "#e8e6e0", outline: "none", userSelect: "text", WebkitUserSelect: "text",
         }}
-      >{text}</div>
+      >
+        {text}
+      </div>
     </div>
+  );
+}
+
+function Toggle({ active, onClick, icon, label }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: active ? "#7c5cfc22" : "#18181f",
+        border: `1px solid ${active ? "#7c5cfc" : "#2a2a35"}`,
+        borderRadius: 10, padding: "10px 16px",
+        color: active ? "#9b7ffe" : "#888",
+        fontSize: 13, cursor: "pointer",
+        display: "flex", alignItems: "center", gap: 8, transition: "all 0.15s",
+      }}
+    >
+      <span style={{ fontSize: 16 }}>{active ? "✓" : "○"}</span>
+      {icon && <span>{icon}</span>}
+      <span>{label}</span>
+    </button>
   );
 }
 
@@ -150,6 +196,8 @@ export default function App() {
   const [input, setInput] = useState("");
   const [passes, setPasses] = useState(3);
   const [styleKey, setStyleKey] = useState("neutral");
+  const [volume, setVolume] = useState("same");
+  const [keepLists, setKeepLists] = useState(true);
   const [factCheck, setFactCheck] = useState(false);
   const [running, setRunning] = useState(false);
   const [log, setLog] = useState([]);
@@ -158,7 +206,7 @@ export default function App() {
   const logRef = useRef(null);
 
   const addLog = (msg, type = "info") => {
-    setLog(prev => [...prev, { msg, type }]);
+    setLog((prev) => [...prev, { msg, type }]);
     setTimeout(() => logRef.current?.scrollTo(0, logRef.current.scrollHeight), 50);
   };
 
@@ -177,7 +225,7 @@ export default function App() {
     for (let i = 0; i < actualPasses.length; i++) {
       addLog(`${PASS_LABELS[i]}...`);
       try {
-        current = await callClaude(actualPasses[i](current));
+        current = await callClaude(actualPasses[i](current, keepLists, volume));
         results.push({ label: PASS_LABELS[i], text: current });
         setPassResults([...results]);
         addLog(`✓ Завершён`, "success");
@@ -204,66 +252,37 @@ export default function App() {
     setRunning(false);
   };
 
-  const finalText = passResults.length > 0 ? passResults[passResults.length - 1].text : "";
+  const charCount = input.length;
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#0f0f13",
-      color: "#e8e6e0",
-      fontFamily: "'Inter', system-ui, sans-serif",
-      padding: "24px 16px"
-    }}>
+    <div style={{ minHeight: "100vh", background: "#0f0f13", color: "#e8e6e0", fontFamily: "'Inter', system-ui, sans-serif", padding: "24px 16px" }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
-          <div style={{
-            display: "inline-block",
-            background: "#7c5cfc22",
-            border: "1px solid #7c5cfc44",
-            borderRadius: 6,
-            padding: "3px 10px",
-            fontSize: 11,
-            color: "#9b7ffe",
-            letterSpacing: 1,
-            textTransform: "uppercase",
-            marginBottom: 10
-          }}>Рерайтер</div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: "#fff" }}>
-            Перефразировка текста
-          </h1>
-          <p style={{ margin: "6px 0 0", fontSize: 14, color: "#888" }}>
-            Несколько проходов через ИИ — текст становится живым и человечным
-          </p>
+          <div style={{ display: "inline-block", background: "#7c5cfc22", border: "1px solid #7c5cfc44", borderRadius: 6, padding: "3px 10px", fontSize: 11, color: "#9b7ffe", letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>
+            Рерайтер
+          </div>
+          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: "#fff" }}>Перефразировка текста</h1>
+          <p style={{ margin: "6px 0 0", fontSize: 14, color: "#888" }}>Несколько проходов через ИИ — текст становится живым и человечным</p>
         </div>
 
         {/* Input */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <label style={{ fontSize: 12, color: "#888", letterSpacing: 0.5 }}>ИСХОДНЫЙ ТЕКСТ</label>
-            {input && (
-              <button
-                onClick={() => setInput("")}
-                style={{
-                  background: "none", border: "none", color: "#555",
-                  fontSize: 18, cursor: "pointer", lineHeight: 1, padding: "0 4px"
-                }}
-                title="Очистить"
-              >✕</button>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {charCount > 0 && <span style={{ fontSize: 12, color: "#555" }}>{charCount} симв.</span>}
+              {input && (
+                <button onClick={() => setInput("")} style={{ background: "none", border: "none", color: "#555", fontSize: 18, cursor: "pointer", lineHeight: 1, padding: "0 4px" }} title="Очистить">✕</button>
+              )}
+            </div>
           </div>
           <textarea
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={(e) => setInput(e.target.value)}
             placeholder="Вставь текст сюда..."
-            style={{
-              width: "100%", minHeight: 180,
-              background: "#18181f", border: "1px solid #2a2a35",
-              borderRadius: 10, color: "#e8e6e0", fontSize: 14,
-              padding: 14, resize: "vertical", outline: "none",
-              boxSizing: "border-box", lineHeight: 1.6
-            }}
+            style={{ width: "100%", minHeight: 180, background: "#18181f", border: "1px solid #2a2a35", borderRadius: 10, color: "#e8e6e0", fontSize: 14, padding: 14, resize: "vertical", outline: "none", boxSizing: "border-box", lineHeight: 1.6 }}
           />
         </div>
 
@@ -274,21 +293,7 @@ export default function App() {
             {Object.entries(STYLES).map(([key, s]) => {
               const active = styleKey === key;
               return (
-                <button
-                  key={key}
-                  onClick={() => setStyleKey(key)}
-                  style={{
-                    flex: 1,
-                    minWidth: 140,
-                    background: active ? "#7c5cfc22" : "#18181f",
-                    border: `1px solid ${active ? "#7c5cfc" : "#2a2a35"}`,
-                    borderRadius: 10,
-                    padding: "10px 14px",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "all 0.15s"
-                  }}
-                >
+                <button key={key} onClick={() => setStyleKey(key)} style={{ flex: 1, minWidth: 140, background: active ? "#7c5cfc22" : "#18181f", border: `1px solid ${active ? "#7c5cfc" : "#2a2a35"}`, borderRadius: 10, padding: "10px 14px", cursor: "pointer", textAlign: "left", transition: "all 0.15s" }}>
                   <div style={{ fontSize: 15, marginBottom: 3 }}>
                     <span style={{ marginRight: 6 }}>{s.icon}</span>
                     <span style={{ fontWeight: 600, color: active ? "#c4b5fd" : "#ccc" }}>{s.label}</span>
@@ -300,77 +305,64 @@ export default function App() {
           </div>
         </div>
 
-        {/* Controls */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{
-            background: "#18181f", border: "1px solid #2a2a35",
-            borderRadius: 10, padding: "10px 14px",
-            display: "flex", alignItems: "center", gap: 12,
-            flex: 1, minWidth: 200
-          }}>
+        {/* Volume selector */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 12, color: "#888", letterSpacing: 0.5, display: "block", marginBottom: 8 }}>ОБЪЁМ</label>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {Object.entries(VOLUME_OPTIONS).map(([key, v]) => {
+              const active = volume === key;
+              const accentColor = key === "shrink" ? "#fc8c5c" : key === "expand" ? "#5cfc8a" : "#7c5cfc";
+              return (
+                <button key={key} onClick={() => setVolume(key)} style={{ flex: 1, minWidth: 120, background: active ? `${accentColor}18` : "#18181f", border: `1px solid ${active ? accentColor : "#2a2a35"}`, borderRadius: 10, padding: "10px 14px", cursor: "pointer", textAlign: "left", transition: "all 0.15s" }}>
+                  <div style={{ fontSize: 15, marginBottom: 3, display: "flex", alignItems: "center", gap: 7 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: active ? accentColor : "#555", letterSpacing: 0, border: `1px solid ${active ? accentColor : "#333"}`, borderRadius: 4, padding: "1px 6px", transition: "all 0.15s" }}>{v.icon}</span>
+                    <span style={{ fontWeight: 600, color: active ? accentColor : "#ccc", fontSize: 14 }}>{v.label}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: active ? `${accentColor}99` : "#555", lineHeight: 1.4, paddingLeft: 2 }}>{v.hint}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Controls row */}
+        <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ background: "#18181f", border: "1px solid #2a2a35", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 180 }}>
             <span style={{ fontSize: 13, color: "#aaa", whiteSpace: "nowrap" }}>Проходов:</span>
-            {[1, 2, 3].map(n => (
-              <button
-                key={n}
-                onClick={() => setPasses(n)}
-                style={{
-                  width: 34, height: 34, borderRadius: 7, border: "none",
-                  cursor: "pointer", fontSize: 14, fontWeight: 600,
-                  background: passes === n ? "#7c5cfc" : "#2a2a35",
-                  color: passes === n ? "#fff" : "#888",
-                  transition: "all 0.15s"
-                }}
-              >{n}</button>
+            {[1, 2, 3].map((n) => (
+              <button key={n} onClick={() => setPasses(n)} style={{ width: 34, height: 34, borderRadius: 7, border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, background: passes === n ? "#7c5cfc" : "#2a2a35", color: passes === n ? "#fff" : "#888", transition: "all 0.15s" }}>{n}</button>
             ))}
           </div>
 
-          <button
-            onClick={() => setFactCheck(f => !f)}
-            style={{
-              background: factCheck ? "#7c5cfc22" : "#18181f",
-              border: `1px solid ${factCheck ? "#7c5cfc" : "#2a2a35"}`,
-              borderRadius: 10, padding: "10px 16px",
-              color: factCheck ? "#9b7ffe" : "#888",
-              fontSize: 13, cursor: "pointer",
-              display: "flex", alignItems: "center", gap: 8,
-              transition: "all 0.15s"
-            }}
-          >
-            <span style={{ fontSize: 16 }}>{factCheck ? "✓" : "○"}</span>
-            Проверка фактов
-          </button>
+          <Toggle active={keepLists} onClick={() => setKeepLists((f) => !f)} icon="📋" label="Сохранять списки" />
+          <Toggle active={factCheck} onClick={() => setFactCheck((f) => !f)} icon="🔍" label="Проверить факты" />
         </div>
 
-        {/* Run */}
+        {/* Run button */}
         <button
           onClick={run}
           disabled={running || !input.trim()}
           style={{
-            width: "100%", padding: "14px",
-            background: running || !input.trim() ? "#2a2a35" : "#7c5cfc",
-            border: "none", borderRadius: 10,
+            width: "100%", padding: "14px 0", borderRadius: 10, border: "none",
+            background: running || !input.trim() ? "#2a2a35" : "linear-gradient(135deg, #7c5cfc, #5c8afc)",
             color: running || !input.trim() ? "#555" : "#fff",
-            fontSize: 15, fontWeight: 600,
-            cursor: running || !input.trim() ? "not-allowed" : "pointer",
-            marginBottom: 20, transition: "all 0.15s"
+            fontSize: 15, fontWeight: 600, cursor: running || !input.trim() ? "not-allowed" : "pointer",
+            transition: "all 0.2s", marginBottom: 20,
           }}
         >
-          {running ? "Обрабатываю..." : "Запустить"}
+          {running ? "Обрабатываю..." : "Перефразировать"}
         </button>
 
         {/* Log */}
         {log.length > 0 && (
-          <div ref={logRef} style={{
-            background: "#18181f", border: "1px solid #2a2a35",
-            borderRadius: 10, padding: 14, marginBottom: 16,
-            maxHeight: 120, overflowY: "auto"
-          }}>
-            {log.map((l, i) => (
-              <div key={i} style={{
-                fontSize: 13,
-                color: l.type === "success" ? "#5cfc8a" : l.type === "error" ? "#fc5c5c" : "#888",
-                padding: "2px 0"
-              }}>{l.msg}</div>
+          <div
+            ref={logRef}
+            style={{ background: "#18181f", border: "1px solid #2a2a35", borderRadius: 10, padding: "12px 16px", marginBottom: 20, maxHeight: 120, overflowY: "auto" }}
+          >
+            {log.map((entry, i) => (
+              <div key={i} style={{ fontSize: 12, lineHeight: 1.8, color: entry.type === "success" ? "#5cfc8a" : entry.type === "error" ? "#fc5c5c" : "#888" }}>
+                {entry.msg}
+              </div>
             ))}
           </div>
         )}
@@ -380,14 +372,14 @@ export default function App() {
           <PassBlock key={i} label={r.label} text={r.text} />
         ))}
 
-        {finalText && (
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 20, marginTop: 4 }}>
-            <CopyBtn text={finalText} />
-          </div>
-        )}
-
+        {/* Fact check result */}
         {factResult && (
-          <PassBlock label="Проверка фактов" text={factResult} />
+          <div style={{ marginTop: 20 }}>
+            <label style={{ fontSize: 12, color: "#888", letterSpacing: 0.5, display: "block", marginBottom: 8 }}>🔍 ПРОВЕРКА ФАКТОВ</label>
+            <div style={{ background: "#18181f", border: "1px solid #2a2a35", borderRadius: 10, padding: 16, fontSize: 14, lineHeight: 1.7, whiteSpace: "pre-wrap", color: "#e8e6e0" }}>
+              {factResult}
+            </div>
+          </div>
         )}
 
       </div>
