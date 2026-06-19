@@ -9,7 +9,7 @@ export default async function handler(req, res) {
       'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY
     },
     body: JSON.stringify({
-      model: 'meta-llama/llama-3.1-8b-instruct:free',
+      model: 'meta-llama/llama-3.1-8b-instruct',
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 4000
     })
