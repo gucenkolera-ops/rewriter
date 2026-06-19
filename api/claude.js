@@ -9,7 +9,7 @@ export default async function handler(req, res) {
       'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY
     },
     body: JSON.stringify({
-      model: 'mistralai/mistral-7b-instruct',
+      model: 'nvidia/llama-3.1-nemotron-ultra-253b-v1:free',
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 4000
     })
