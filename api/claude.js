@@ -17,6 +17,6 @@ export default async function handler(req, res) {
   });
 
   const data = await response.json();
-  const text = data?.content?.[0]?.text || '';
+  const text = data?.content?.find(b => b.type === 'text')?.text || '';
   res.status(200).json({ text, debug: data });
 }
