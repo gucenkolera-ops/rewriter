@@ -17,5 +17,5 @@ export default async function handler(req, res) {
 
   const data = await response.json();
   const text = data?.choices?.[0]?.message?.content || '';
-  res.status(200).json({ text });
+  res.status(200).json({ text, debug: data });
 }
