@@ -2,7 +2,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const { prompt } = req.body;
 
-  const response = await fetch('https://api.openmodel.app/v1/chat/completions', {
+  const response = await fetch('https://api.openmodel.ai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
