@@ -1,9 +1,6 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const { prompt } = req.body;
-  
-  console.log('PROMPT LENGTH:', prompt?.length);
-  console.log('PROMPT START:', prompt?.substring(0, 200));
 
   const response = await fetch('https://api.openmodel.ai/v1/messages', {
     method: 'POST',
@@ -14,7 +11,7 @@ export default async function handler(req, res) {
     },
     body: JSON.stringify({
       model: 'deepseek-v4-flash',
-      max_tokens: 4000,
+      max_tokens: 8000,
       messages: [{ role: 'user', content: prompt }]
     })
   });
