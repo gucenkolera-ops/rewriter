@@ -2,7 +2,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const { prompt } = req.body;
 
-  const response = await fetch('https://api.openmodel.ai/v1/chat/completions', {
+  const response = await fetch('https://api.openmodel.ai/v1/responses', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -10,12 +10,12 @@ export default async function handler(req, res) {
     },
     body: JSON.stringify({
       model: 'deepseek-v4-flash',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 4000
+      input: prompt,
+      max_output_tokens: 4000
     })
   });
 
   const data = await response.json();
-  const text = data?.choices?.[0]?.message?.content || '';
+  const text = data?.output?.[0]?.content?.[0]?.text || '';
   res.status(200).json({ text, debug: data });
 }
