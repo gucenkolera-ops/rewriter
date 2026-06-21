@@ -1,6 +1,9 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const { prompt } = req.body;
+  
+  console.log('PROMPT LENGTH:', prompt?.length);
+  console.log('PROMPT START:', prompt?.substring(0, 200));
 
   const response = await fetch('https://api.openmodel.ai/v1/messages', {
     method: 'POST',
@@ -18,5 +21,5 @@ export default async function handler(req, res) {
 
   const data = await response.json();
   const text = data?.content?.find(b => b.type === 'text')?.text || '';
-  res.status(200).json({ text, debug: data });
+  res.status(200).json({ text });
 }
